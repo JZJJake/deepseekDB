@@ -1,0 +1,10 @@
+streamlit
+langchain==0.2.0
+langchain-core==0.2.43
+langchain-community
+langchain-huggingface
+langchain-openai
+langchain-chroma
+chromadb
+sentence-transformers
+python-dotenv
