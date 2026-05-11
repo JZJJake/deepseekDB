@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
-from langchain_classic.chains.retrieval import create_retrieval_chain
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains.retrieval import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 from vector_store_manager import get_vector_store
 
 load_dotenv()
@@ -18,7 +18,7 @@ def get_llm():
     """Returns the DeepSeek LLM instance."""
     # We use ChatOpenAI because DeepSeek's API is compatible with OpenAI's format
     return ChatOpenAI(
-        model="deepseek-v4-pro",
+        model="deepseek-chat",
         api_key=DEEPSEEK_API_KEY,
         base_url=DEEPSEEK_API_BASE,
         temperature=0.0, # Zero temperature to avoid hallucination
@@ -30,8 +30,12 @@ import streamlit as st
 @st.cache_resource
 def setup_rag_chain():
     """Sets up the Retrieval-Augmented Generation chain."""
+    try:
+        vectorstore = get_vector_store()
+    except ValueError as e:
+        return None
+
     llm = get_llm()
-    vectorstore = get_vector_store()
 
     # Retrieve top 3 most relevant Q&A blocks
     retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
@@ -64,5 +68,7 @@ def setup_rag_chain():
 def ask_question(question: str) -> str:
     """Convenience function to ask a question to the RAG system."""
     chain = setup_rag_chain()
+    if chain is None:
+        return "抱歉，知识库尚未初始化。请先通过管理后台(端口 8502)上传您的MD政策文档并生成知识库。"
     response = chain.invoke({"input": question})
     return response["answer"]

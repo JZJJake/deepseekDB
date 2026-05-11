@@ -1,5 +1,5 @@
 import os
-import shutil
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 from typing import List
 
 from langchain_core.documents import Document
@@ -9,6 +9,7 @@ from langchain_chroma import Chroma
 # The embedding model. BAAI/bge-small-zh-v1.5 is a very good open-source Chinese model.
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
 VECTOR_STORE_DIR = "vector_store"
+COLLECTION_NAME = "policy_qa"
 
 import streamlit as st
 
@@ -26,23 +27,29 @@ def get_embeddings():
 
 def create_vector_store(documents: List[Document], persist_directory: str = VECTOR_STORE_DIR):
     """
-    Creates a new vector store from a list of documents.
-    If a vector store already exists, it removes it first to create a fresh one.
+    Creates a new vector store from a list of documents or updates an existing one.
+    To avoid file locking issues on Windows, we clear the existing collection
+    instead of deleting the directory.
     """
-    if os.path.exists(persist_directory):
-        print(f"Removing existing vector store at {persist_directory}...")
-        shutil.rmtree(persist_directory)
-
-    print(f"Creating new vector store from {len(documents)} documents...")
+    print(f"Creating/Updating vector store with {len(documents)} documents...")
     embeddings = get_embeddings()
 
-    # Create the vector store
-    vectorstore = Chroma.from_documents(
-        documents=documents,
-        embedding=embeddings,
-        persist_directory=persist_directory
+    # Initialize Chroma
+    vectorstore = Chroma(
+        persist_directory=persist_directory,
+        embedding_function=embeddings,
+        collection_name=COLLECTION_NAME
     )
-    print(f"Vector store created at {persist_directory}.")
+
+    # Clear existing documents
+    existing_ids = vectorstore.get()["ids"]
+    if existing_ids:
+        print(f"Clearing {len(existing_ids)} existing documents...")
+        vectorstore.delete(ids=existing_ids)
+
+    # Add new documents
+    vectorstore.add_documents(documents)
+    print(f"Vector store updated at {persist_directory}.")
     return vectorstore
 
 def get_vector_store(persist_directory: str = VECTOR_STORE_DIR):
@@ -55,6 +62,7 @@ def get_vector_store(persist_directory: str = VECTOR_STORE_DIR):
     embeddings = get_embeddings()
     vectorstore = Chroma(
         persist_directory=persist_directory,
-        embedding_function=embeddings
+        embedding_function=embeddings,
+        collection_name=COLLECTION_NAME
     )
     return vectorstore
