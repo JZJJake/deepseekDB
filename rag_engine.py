@@ -18,7 +18,7 @@ def get_llm():
     """Returns the DeepSeek LLM instance."""
     # We use ChatOpenAI because DeepSeek's API is compatible with OpenAI's format
     return ChatOpenAI(
-        model="deepseek-chat",
+        model="deepseek-v4-pro",
         api_key=DEEPSEEK_API_KEY,
         base_url=DEEPSEEK_API_BASE,
         temperature=0.0, # Zero temperature to avoid hallucination
